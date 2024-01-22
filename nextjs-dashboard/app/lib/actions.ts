@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { News_Cycle } from 'next/font/google';
 
 const FormSchema = z.object({
   id: z.string(),
@@ -26,11 +27,14 @@ export async function createInvoice(formData: FormData) {
   const date = new Date().toISOString().split('T')[0];
   // const rawFormData = Object.fromEntries(formData.entries())
   // console.log(rawFormData);
-
-  await sql`
+  try {
+    await sql`
     INSERT INTO invoices (customer_id, amount, status, date)
     VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
   `;
+  } catch (error) {
+    return { message: 'Database Error: Failed to Create Invoice.' };
+  }
   const invoicesPath = '/dashboard/invoices';
   revalidatePath(invoicesPath);
   redirect(invoicesPath);
@@ -44,13 +48,17 @@ export async function updateInvoice(id: string, formData: FormData) {
   });
   const amountInCents = amount * 100;
 
-  await sql`
+  try {
+    await sql`
         UPDATE invoices
         SET customer_id = ${customerId},
             amount = ${amountInCents},
             status = ${status}
         WHERE id = ${id}
     `;
+  } catch (error) {
+    return { message: 'Database Error: Failed to Update Invoice.' };
+  }
 
   const invoicesPath = '/dashboard/invoices';
   revalidatePath(invoicesPath);
@@ -58,10 +66,16 @@ export async function updateInvoice(id: string, formData: FormData) {
 }
 
 export async function deleteInvoice(id: string) {
-  await sql`
+  throw new Error ('Failed to Delete Invoice.');
+  try {
+    await sql`
             DELETE FROM invoices
             WHERE id = ${id}
         `;
+    return { message: 'Deleted Invoice.' };
+  } catch (error) {
+    return { message: 'Database Error: Failed to Delete Invoice.' };
+  }
 
   const invoicesPath = '/dashboard/invoices';
   revalidatePath(invoicesPath);
